@@ -57,6 +57,9 @@ type Context struct {
 
 	// Accepted defines a list of manually accepted formats for content negotiation.
 	Accepted []string
+
+	// Matching Route is the route that is matching the current request
+	MatchingRoute string
 }
 
 /************************************/

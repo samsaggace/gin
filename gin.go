@@ -358,8 +358,9 @@ func (engine *Engine) handleHTTPRequest(c *Context) {
 		}
 		root := t[i].root
 		// Find route in tree
-		handlers, params, tsr := root.getValue(path, c.Params, unescape)
+		handlers, params, tsr, matchingRoute := root.getValue(path, c.Params, unescape)
 		if handlers != nil {
+			c.MatchingRoute = matchingRoute
 			c.handlers = handlers
 			c.Params = params
 			c.Next()
@@ -383,7 +384,7 @@ func (engine *Engine) handleHTTPRequest(c *Context) {
 			if tree.method == httpMethod {
 				continue
 			}
-			if handlers, _, _ := tree.root.getValue(path, nil, unescape); handlers != nil {
+			if handlers, _, _, _ := tree.root.getValue(path, nil, unescape); handlers != nil {
 				c.handlers = engine.allNoMethod
 				serveError(c, http.StatusMethodNotAllowed, default405Body)
 				return

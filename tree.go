@@ -94,6 +94,7 @@ type node struct {
 	nType     nodeType
 	maxParams uint8
 	wildChild bool
+	fullPath  string
 }
 
 // increments priority of the given child and reorders if necessary.
@@ -362,6 +363,7 @@ func (n *node) insertChild(numParams uint8, path string, fullPath string, handle
 	// insert remaining path part and handle to the leaf
 	n.path = path[offset:]
 	n.handlers = handlers
+	n.fullPath = fullPath
 }
 
 // getValue returns the handle registered with the given path (key). The values of
@@ -369,13 +371,14 @@ func (n *node) insertChild(numParams uint8, path string, fullPath string, handle
 // If no handle can be found, a TSR (trailing slash redirect) recommendation is
 // made if a handle exists with an extra (without the) trailing slash for the
 // given path.
-func (n *node) getValue(path string, po Params, unescape bool) (handlers HandlersChain, p Params, tsr bool) {
+func (n *node) getValue(path string, po Params, unescape bool) (handlers HandlersChain, p Params, tsr bool, fullPath string) {
 	p = po
 walk: // Outer loop for walking the tree
 	for {
 		if len(path) > len(n.path) {
 			if path[:len(n.path)] == n.path {
 				path = path[len(n.path):]
+				fullPath = n.fullPath
 				// If this node does not have a wildcard (param or catchAll)
 				// child,  we can just look up the next child node and continue
 				// to walk down the tree
@@ -384,6 +387,7 @@ walk: // Outer loop for walking the tree
 					for i := 0; i < len(n.indices); i++ {
 						if c == n.indices[i] {
 							n = n.children[i]
+							fullPath = n.fullPath
 							continue walk
 						}
 					}
@@ -397,6 +401,7 @@ walk: // Outer loop for walking the tree
 
 				// handle wildcard child
 				n = n.children[0]
+				fullPath = n.fullPath
 				switch n.nType {
 				case param:
 					// find param end (either '/' or path end)
@@ -442,6 +447,7 @@ walk: // Outer loop for walking the tree
 						// No handle found. Check if a handle for this path + a
 						// trailing slash exists for TSR recommendation
 						n = n.children[0]
+						fullPath = n.fullPath
 						tsr = n.path == "/" && n.handlers != nil
 					}
 
@@ -465,6 +471,7 @@ walk: // Outer loop for walking the tree
 					}
 
 					handlers = n.handlers
+					fullPath = n.fullPath
 					return
 
 				default:
@@ -488,6 +495,7 @@ walk: // Outer loop for walking the tree
 			for i := 0; i < len(n.indices); i++ {
 				if n.indices[i] == '/' {
 					n = n.children[i]
+					fullPath = n.fullPath
 					tsr = (len(n.path) == 1 && n.handlers != nil) ||
 						(n.nType == catchAll && n.children[0].handlers != nil)
 					return
